@@ -1,0 +1,168 @@
+<!--
+  This is a record of a previous attempt to revamp the GDS Insights Footprint map.
+  It's the code used in a narrative, built on top of an empty list that iteratively
+  gets populated with GA geographical data in GEO-JSON format.
+ -->
+
+<!-- PREFIX -->
+<script src="/crudocs/mapbox/mapbox-0.38.0/mapbox-gl.js"></script>
+<link href="/crudocs/mapbox/mapbox-0.38.0/mapbox-gl-oracle_custom1.css" rel='stylesheet' />
+<script src="/crudocs/turf/4.4.0/turf.min.js"></script>
+  <style>
+    /* Map Container Sizing for full-screen */
+    #map-container { width: 1200px; height: 600px;}
+    #map { position:relative; width:100%; height:100%}
+  </style>
+<script>
+var all_features = [];
+</script>
+
+<!-- NARRATIVE -->
+<script>
+all_features.push(
+  '{"type": "Feature", "geometry": {"type": "Point", "coordinates": [@3, @4]}, "properties": {"location": "@5", "user_count": @6}}'
+  );
+</script>
+
+<!-- POSTFIX -->
+<style>
+  /* Popup styling */
+  .mapboxgl-popup {
+    max-width: 400px;
+    font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  }
+</style>
+<div id='map-container'>
+  <div id='map'></div>
+  <script>
+
+  // Combine the arrays from OBIEE into a single text string
+  var text = '{ "type": "FeatureCollection", "features": [' + all_features + ']}'
+
+  // Parse the combined text string and convert it to GeoJSON format
+  var geo_json_master_obj = JSON.parse(text);
+
+  /* /* /* SPECIAL NOTE */
+  // You MUST keep the "user_count" data type without commas.
+  // Otherwise, there is complex conversions required to convert
+  // the value back and forth to account for comma inclusions.
+
+  // Add Popup on Hover -- Create a popup, but don't add it to the map yet.
+  var popup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false
+  });
+
+  mapboxgl.accessToken = 'pk.eyJ1IjoiY3J1LWRzYSIsImEiOiJjajQ1bmpqOG8wa2J1MzNtdTJ5emQ5MzliIn0.uSUw09NoUW0-cg3jinddXQ';
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v10',
+    zoom: 1.15,
+    center: [0,20]
+  });
+
+  map.on('load', function() {
+
+    // Add zoom and rotation controls to the map.
+    var nav = new mapboxgl.NavigationControl();
+    map.addControl(nav, 'top-left');
+    map.addControl(new mapboxgl.FullscreenControl(), 'top-left');
+
+    // Adding 3D-buildings on zoom
+    map.addLayer({
+        'id': '3d-buildings',
+        'source': 'composite',
+        'source-layer': 'building',
+        'filter': ['==', 'extrude', 'true'],
+        'type': 'fill-extrusion',
+        'minzoom': 15,
+        'paint': {
+            'fill-extrusion-color': '#aaa',
+            'fill-extrusion-height': {
+                'type': 'identity',
+                'property': 'height'
+            },
+            'fill-extrusion-base': {
+                'type': 'identity',
+                'property': 'min_height'
+            },
+            'fill-extrusion-opacity': .6
+        }
+    });
+
+    map.addLayer({
+      'id': 'oracle-data',
+      'type': 'circle',
+      'source': {
+        'type': 'geojson',
+        'data': geo_json_master_obj
+      },
+      'layout': {
+        'visibility': 'visible'
+      },
+      'paint': {
+        // make circles larger as the user zooms from z12 to z22
+        'circle-radius': {
+            /*'base': 1.75,
+            'stops': [[4, 2], [8, 4], [22, 180]]*/
+            'property': 'user_count',
+            'type': 'exponential',
+            'stops': [
+              [{ "zoom": 4, "value": 1 }, 2],
+              [{ "zoom": 4, "value": 10 }, 3],
+              [{ "zoom": 4, "value": 100 }, 5],
+              [{ "zoom": 4, "value": 500 }, 7],
+              [{ "zoom": 8, "value": 1 }, 2],
+              [{ "zoom": 8, "value": 10 }, 4],
+              [{ "zoom": 8, "value": 100 }, 7],
+              [{ "zoom": 8, "value": 500 }, 14],
+              [{ "zoom": 22, "value": 1 }, 20],
+              [{ "zoom": 22, "value": 10 }, 40],
+              [{ "zoom": 22, "value": 100 }, 60],
+              [{ "zoom": 22, "value": 500 }, 120]
+            ]
+        },
+        'circle-color': 'rgba(50,130,175,1)'
+        /*'circle-color': {
+          property: 'user_count',
+          type: 'exponential',
+          stops: [
+            [0, '#2DC4B2'],
+            [5, '#3BB3C3'],
+            [10, '#669EC4'],
+            [15, '#8B88B6'],
+            [20, '#A2719B'],
+            [25, '#AA5E79']
+          ]
+        }*/
+      }
+    });
+
+
+    map.on('mouseenter', 'oracle-data', function(e) {
+        // Change the cursor style as a UI indicator.
+        map.getCanvas().style.cursor = 'pointer';
+
+        // Populate the popup and set its coordinates
+        // based on the feature found.
+        popup.setLngLat(e.features[0].geometry.coordinates)
+            .setHTML('Location: ' + e.features[0].properties.location + '<br />Users: ' + e.features[0].properties.user_count)
+            .addTo(map);
+    });
+
+    map.on('mouseleave', 'oracle-data', function() {
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+      });
+
+    // Center the map on the coordinates of any clicked symbol from the 'symbols' layer.
+    // Also set the variable to be listened for by the chart.
+    map.on('click', 'oracle-data', function (e) {
+        map.flyTo({center: e.features[0].geometry.coordinates, speed: 0.5});
+        var location_name = e.features[0].properties.location;
+    });
+
+  });
+
+</script>
+</div>

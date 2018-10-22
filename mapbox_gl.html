@@ -1,0 +1,33 @@
+<html>
+  <head>
+
+    <!-- Deck.GL sript in the event that I want to add this -->
+    <script src="https://unpkg.com/deck.gl@^6.2.0/deckgl.min.js"></script>
+
+    <!-- Mapbox dependencies -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+
+    <style type="text/css">
+      body {margin: 0; padding: 0;}
+      /* #map {width: 100vw; height: 100vh;}--> */
+    </style>
+
+  </head>
+
+  <body>
+    <div id='map' style='width: 100%; height: 100%;'></div>
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1IjoiY3J1LWRzYSIsImEiOiJjajQ1bmpqOG8wa2J1MzNtdTJ5emQ5MzliIn0.uSUw09NoUW0-cg3jinddXQ';
+      var map = new mapboxgl.Map({
+          container: 'map',
+          style: 'mapbox://styles/mapbox/streets-v9'
+      });
+      </script>
+  </body>
+
+  <script type="text/javascript">
+
+  </script>
+
+</html>
